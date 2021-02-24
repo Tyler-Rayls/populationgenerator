@@ -20,7 +20,7 @@ def respond():
     if not state or not year:
         return "The state or year was not provided."
 
-    results = get_data(state, year)
+    results = get_population(state, year)
 
     response = {"state": state, "year": year, "population": results[1][1]}
 
