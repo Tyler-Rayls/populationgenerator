@@ -21,17 +21,21 @@ state_code = {"AK": "02", "AL": "01", "AR": "05", "AZ": "04", "CA": "06", "CO": 
 wiki_states = {"AK": "Alaska", "AL": "Alabama", "AR": "Arkansas", "AZ": "Arizona", "CA": "California", "CO": "Colorado",
                "CT": "Connecticut", "DE": "Delaware", "FL": "Florida", "GA": "Georgia", "HI": "Hawaii", "IA": "Iowa",
                "ID": "Idaho", "IL": "Illinois", "IN": "Indiana", "KS": "Kansas", "KY": "Kentucky", "LA": "Louisiana",
-               "MA": "Massachusetts", "MD": "Maryland", "ME": "Maine", "MI": "Michigan", "MN": "Minnesota", "MO": "Missouri",
-               "MS": "Mississippi", "MT": "Montana", "NC": "North_Carolina", "ND": "North_Dakota", "NE": "Nebraska",
-               "NH": "New_Hampshire", "NJ": "New_Jersey", "NM": "New_Mexico", "NV": "Nevada", "NY": "New_York_(state)",
-               "OH": "Ohio", "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania", "RI": "Rhode_Island", "SC": "South_Carolina",
-               "SD": "South_Dakota", "TN": "Tennessee", "TX": "Texas", "UT": "Utah", "VA": "Virginia", "VT": "Vermont",
-               "WA": "Washingotn", "WI": "Wisconsin", "WV": "West_Virginia", "WY": "Wyoming"}
+               "MA": "Massachusetts", "MD": "Maryland", "ME": "Maine", "MI": "Michigan", "MN": "Minnesota",
+               "MO": "Missouri", "MS": "Mississippi", "MT": "Montana", "NC": "North_Carolina", "ND": "North_Dakota",
+               "NE": "Nebraska", "NH": "New_Hampshire", "NJ": "New_Jersey", "NM": "New_Mexico", "NV": "Nevada",
+               "NY": "New_York_(state)", "OH": "Ohio", "OK": "Oklahoma", "OR": "Oregon", "PA": "Pennsylvania",
+               "RI": "Rhode_Island", "SC": "South_Carolina", "SD": "South_Dakota", "TN": "Tennessee", "TX": "Texas",
+               "UT": "Utah", "VA": "Virginia", "VT": "Vermont", "WA": "Washington", "WI": "Wisconsin",
+               "WV": "West_Virginia", "WY": "Wyoming"}
+
+states = ["AK", "AL", "AR", "AZ", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "IA", "ID", "IL", "IN", "KS", "KY",
+          "LA", "MA", "MD", "ME", "MI", "MN", "MO", "MS", "MT", "NC", "ND", "NE", "NH", "NJ", "NM", "NV", "NY",
+          "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VA", "VT", "WA", "WI", "WV", "WY"]
 
 def get_data_for_gui():
     '''
     Executes when the button is clicked to get data for the selected state and year and display it on the GUI.
-
     '''
     state = state_drop_down.get()
     year = years_drop_down.get()
@@ -53,35 +57,46 @@ def get_info(state, year):
     r = requests.get(base_url, params=predicates)
     return r.json()
 
+def get_predicates(state):
+    '''
+    Sets the query parameters for the API call being made
+    :param state: state to be request data from the API on
+    :return predicates: parameters for the request URL
+    '''
+    predicates = {}
+    predicates["get"] = ",".join(["NAME", "S0201_001E"])
+    predicates["for"] = ":".join(["state", state_code[state]])
+    predicates["key"] = "93647a1c34b435616eb32f2172d87eed03eebfa7"
+    return predicates
+
+def get_base_url(year):
+    '''
+    Creates the base url of the API request to get the population of a state in a year.
+    :param year: year to get the population of
+    :return base_url: url of the API request being made
+    '''
+    host = "https://api.census.gov/data"
+    dataset = "acs/acs1/spp"
+    base_url = "/".join([host, year, dataset])
+    return base_url
 
 def get_population(state, year):
     '''
     Makes a request to the API for the population size of a state in a given year.
     :param state: state to request population size of
     :param year: year to request the data
-    :param update_GUI: boolean used to determine if the GUI is being used and results should be displayed there
     :return: a json of the response from the request
     '''
-    # Creates the base url for the API request
-    host = "https://api.census.gov/data"
-    dataset = "acs/acs1/spp"
-    base_url = "/".join([host, year, dataset])
-
-    # Sets the query parameters for the API
-    predicates = {}
-    get_vars = ["NAME", "S0201_001E"]
-    predicates["get"] = ",".join(get_vars)
-    predicates["for"] = ":".join(["state", state_code[state]])
-    predicates["key"] = "93647a1c34b435616eb32f2172d87eed03eebfa7"
-
-    # Requests the data for the given state and year returns the json of the response
+    base_url = get_base_url(year)
+    predicates = get_predicates(state)
     r = requests.get(base_url, params=predicates)
     return r.json()
 
 def display_results(population_results, economy_results, state, year):
     '''
     Updates the labels on the GUI with the results from the API call.
-    :param results: json response from the API call
+    :param population_results: json response from the API call
+    :param economy_results: json response from the content generator microservice
     :param state: state that was requested
     :param year: year for the request
     '''
@@ -98,7 +113,6 @@ def parse_input_csv():
     '''
     Parses the input.csv file for the state and year if it was passed as an argument when running the program.
     '''
-    # Opens the input.csv file that was passed into the user
     with open('input.csv') as csv_file:
         csv_reader = csv.DictReader(csv_file)
         for row in csv_reader:
@@ -112,54 +126,50 @@ def write_output_csv(results, state, year):
     :param state: state that was requested
     :param year: year for the request
     '''
-    # Opens/creates output.csv and writes the header and data row to the file
     with open('output.csv', mode="w") as output_file:
         output_writer = csv.writer(output_file, delimiter=",", quotechar='"', quoting=csv.QUOTE_MINIMAL)
         output_writer.writerow(["input_year", "input_state", "output_population_size"])
         output_writer.writerow([year, state, results[1][1]])
 
-# Checks if the input.csv file was included as an argument when loading the program
-if len(sys.argv) > 1 and sys.argv[1] == 'input.csv':
-    # Parses input.csv, requests the data from the census API, and writes the response to output.csv
-    state, year = parse_input_csv()
-    results = get_population(state, year)
-    write_output_csv(results, state, year)
-else:
-    # Creates the GUI, gives it a title, and defines the start up size
-    window = Tk()
-    window.title("Population Generator")
-    window.geometry("400x400")
-    frame = Frame(window)
-    frame.pack()
+if __name__ == "__main__":
+    # Checks if the user passed an argument in the command line signaling they do not want to use the GUI
+    if len(sys.argv) > 1 and sys.argv[1] == 'input.csv':
+        # Parses input.csv, requests the data from the census API, and writes the response to output.csv
+        state, year = parse_input_csv()
+        results = get_population(state, year)
+        write_output_csv(results, state, year)
+    else:
+        # Creates the GUI, gives it a title, and defines the start up size
+        window = Tk()
+        window.title("Population Generator")
+        window.geometry("400x400")
+        frame = Frame(window)
+        frame.pack()
 
-    # Adds a drop down list (combobox) to the window for the user to select a state from
-    states = ["AK", "AL", "AR", "AZ", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "IA", "ID", "IL", "IN", "KS", "KY",
-              "LA", "MA", "MD", "ME", "MI", "MN", "MO", "MS", "MT", "NC", "ND", "NE", "NH", "NJ", "NM", "NV", "NY",
-              "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UM", "UT", "VA", "VT", "WA", "WI", "WV", "WY"]
-    state_drop_down = ttk.Combobox(frame, values=states)
-    state_drop_down.set("Pick a State")
-    state_drop_down.pack(padx=5, pady=5)
+        # Adds a drop down list (combobox) to the window for the user to select a state from
+        state_drop_down = ttk.Combobox(frame, values=states)
+        state_drop_down.set("Pick a State")
+        state_drop_down.pack(padx=5, pady=5)
 
-    # Adds a drop down list (combobox) to the window for the user to select a census year from
-    years = ["2019", "2018", "2017", "2016", "2015", "2014", "2013", "2012",
-             "2011", "2010", "2009", "2008"]
-    years_drop_down = ttk.Combobox(frame, values=years)
-    years_drop_down.set("Pick a Year")
-    years_drop_down.pack(padx=5, pady=5)
+        # Adds a drop down list (combobox) to the window for the user to select a census year from
+        years = ["2019", "2018", "2017", "2015", "2014", "2013", "2012", "2011", "2010", "2009", "2008"]
+        years_drop_down = ttk.Combobox(frame, values=years)
+        years_drop_down.set("Pick a Year")
+        years_drop_down.pack(padx=5, pady=5)
 
-    # Adds a button to get the population size for the State and Year selected
-    get_data_button = ttk.Button(frame, text="Submit", command=get_data_for_gui)
-    get_data_button.pack(padx=5, pady=5)
+        # Adds a button to get the population size for the State and Year selected
+        get_data_button = ttk.Button(frame, text="Submit", command=get_data_for_gui)
+        get_data_button.pack(padx=5, pady=5)
 
-    # Adds a labels for the state, year, and population results to be displayed
-    state_label = Label(frame, text="State: ")
-    state_label.pack()
-    year_label = Label(frame, text="Year: ")
-    year_label.pack()
-    population_label = Label(frame, text="Population: ")
-    population_label.pack()
-    economy_label = Label(frame, text="", wraplength=350)
-    economy_label.pack()
+        # Adds a labels for the state, year, and population results to be displayed
+        state_label = Label(frame, text="State: ")
+        state_label.pack()
+        year_label = Label(frame, text="Year: ")
+        year_label.pack()
+        population_label = Label(frame, text="Population: ")
+        population_label.pack()
+        economy_label = Label(frame, text="", wraplength=350)
+        economy_label.pack()
 
-    # Starts the GUI application
-    window.mainloop()
+        # Starts the GUI application
+        window.mainloop()
