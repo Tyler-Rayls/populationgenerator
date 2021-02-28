@@ -12,6 +12,7 @@ state_code = {"AK": "02", "AL": "01", "AR": "05", "AZ": "04", "CA": "06", "CO": 
 
 app = Flask(__name__)
 
+# Route handler for requests to the population generator microservice to return the population size for a state/year
 @app.route('/get', methods=['GET'])
 def respond():
     state = request.args.get("state")
@@ -26,6 +27,7 @@ def respond():
 
     return jsonify(response)
 
+# Route handler for all other pages that returns a message on how to use the microservice
 @app.route('/')
 def index():
     return "Enter a get request in the following format: '/get?state=state&year=year'"
