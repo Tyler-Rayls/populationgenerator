@@ -33,15 +33,79 @@ states = ["AK", "AL", "AR", "AZ", "CA", "CO", "CT", "DE", "FL", "GA", "HI", "IA"
           "LA", "MA", "MD", "ME", "MI", "MN", "MO", "MS", "MT", "NC", "ND", "NE", "NH", "NJ", "NM", "NV", "NY",
           "OH", "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VA", "VT", "WA", "WI", "WV", "WY"]
 
-def get_data_for_gui():
-    '''
-    Executes when the button is clicked to get data for the selected state and year and display it on the GUI.
-    '''
-    state = state_drop_down.get()
-    year = years_drop_down.get()
-    population_results = get_population(state, year)
-    info_results = get_info(state, year)
-    display_results(population_results, info_results, state, year)
+years = ["2019", "2018", "2017", "2015", "2014", "2013", "2012", "2011", "2010", "2009", "2008"]
+
+class GUI:
+    '''Creates a graphical user interface (GUI) for the user to use the Population Generator microservice.'''
+    def __init__(self):
+        '''Initializes the window, frames, and widgets that belong to the GUI and launches it.'''
+        self.window = self.create_window()
+        self.input_frame = self.create_label_frame("Input")
+        self.population_frame = self.create_label_frame("Population")
+        self.info_frame = self.create_label_frame("Information")
+        self.state_drop_down = self.create_drop_down(states, "Pick a State")
+        self.years_drop_down = self.create_drop_down(years, "Pick a Year")
+        self.get_data_button = self.create_button()
+        self.state_label = self.create_label(self.population_frame, "State: ")
+        self.year_label = self.create_label(self.population_frame, "Year: ")
+        self.population_label = self.create_label(self.population_frame, "Population: ")
+        self.info_label = self.create_label(self.info_frame, "", 350)
+        self.window.mainloop()
+
+    def create_window(self):
+        '''Creates the GUI, gives it a title, sets the minimum size, and changes the background color'''
+        window = Tk()
+        window.title("Population Generator")
+        window.minsize(400, 400)
+        window.configure(background="grey91")
+        return window
+
+    def create_label_frame(self, type):
+        '''Adds a label to the window to display text for the user.'''
+        frame = ttk.Labelframe(self.window, text=type)
+        frame.pack(fill="both", expand="yes", padx=5, pady=5)
+        return frame
+
+    def create_drop_down(self, values, default):
+        '''Adds a drop down list (combobox) to the window for the user to select a value from'''
+        drop_down = ttk.Combobox(self.input_frame, values=values)
+        drop_down.set(default)
+        drop_down.pack(padx=5, pady=5)
+        return drop_down
+
+    def create_button(self):
+        '''Adds a button to get the population size and additional info for the State and Year selected'''
+        button = ttk.Button(self.input_frame, text="Submit", command=self.get_data)
+        button.pack(padx=5, pady=5)
+        return button
+
+    def create_label(self, frame, default, wrap=None):
+        '''Adds a label for displaying results'''
+        if wrap:
+            label = Label(frame, text=default, wraplength=wrap, background="grey91")
+        else:
+            label = Label(frame, text=default, background="grey91")
+
+        label.pack()
+        return label
+
+    def get_data(self):
+        '''Gets the data that will be displayed on the GUI for the given year'''
+        state = self.state_drop_down.get()
+        year = self.years_drop_down.get()
+        population_results = get_population(state, year)
+        info_results = get_info(state, year)
+        self.display_results(population_results, info_results, state, year)
+
+    def display_results(self, population, info, state, year):
+        '''Updates the labels on the GUI to contain the data that was just requested'''
+        state_text = " ".join(["State:", state])
+        year_text = " ".join(["Year:", year])
+        pop_text = " ".join(["Population:", population[1][1]])
+        self.state_label.configure(text=state_text)
+        self.year_label.configure(text=year_text)
+        self.population_label.configure(text=pop_text)
+        self.info_label.configure(text=info)
 
 def get_info(state, year):
     '''
@@ -54,8 +118,13 @@ def get_info(state, year):
     predicates = {}
     predicates["pri"] = wiki_states[state]
     predicates["sec"] = year
-    r = requests.get(base_url, params=predicates)
-    return r.json()
+
+    try:
+        r = requests.get(base_url, params=predicates)
+    except requests.exceptions.ConnectionError:
+        return "Error connecting to the content generator server."
+
+    return r.json()["wiki"]
 
 def get_predicates(state):
     '''
@@ -92,23 +161,6 @@ def get_population(state, year):
     r = requests.get(base_url, params=predicates)
     return r.json()
 
-def display_results(population_results, economy_results, state, year):
-    '''
-    Updates the labels on the GUI with the results from the API call.
-    :param population_results: json response from the API call
-    :param economy_results: json response from the content generator microservice
-    :param state: state that was requested
-    :param year: year for the request
-    '''
-    state_text = " ".join(["State:", state])
-    year_text = " ".join(["Year:", year])
-    pop_text = " ".join(["Population:", population_results[1][1]])
-    econ_text = economy_results["wiki"]
-    state_label.configure(text=state_text)
-    year_label.configure(text=year_text)
-    population_label.configure(text=pop_text)
-    economy_label.configure(text=econ_text)
-
 def parse_input_csv():
     '''
     Parses the input.csv file for the state and year if it was passed as an argument when running the program.
@@ -139,37 +191,5 @@ if __name__ == "__main__":
         results = get_population(state, year)
         write_output_csv(results, state, year)
     else:
-        # Creates the GUI, gives it a title, and defines the start up size
-        window = Tk()
-        window.title("Population Generator")
-        window.geometry("400x400")
-        frame = Frame(window)
-        frame.pack()
-
-        # Adds a drop down list (combobox) to the window for the user to select a state from
-        state_drop_down = ttk.Combobox(frame, values=states)
-        state_drop_down.set("Pick a State")
-        state_drop_down.pack(padx=5, pady=5)
-
-        # Adds a drop down list (combobox) to the window for the user to select a census year from
-        years = ["2019", "2018", "2017", "2015", "2014", "2013", "2012", "2011", "2010", "2009", "2008"]
-        years_drop_down = ttk.Combobox(frame, values=years)
-        years_drop_down.set("Pick a Year")
-        years_drop_down.pack(padx=5, pady=5)
-
-        # Adds a button to get the population size for the State and Year selected
-        get_data_button = ttk.Button(frame, text="Submit", command=get_data_for_gui)
-        get_data_button.pack(padx=5, pady=5)
-
-        # Adds a labels for the state, year, and population results to be displayed
-        state_label = Label(frame, text="State: ")
-        state_label.pack()
-        year_label = Label(frame, text="Year: ")
-        year_label.pack()
-        population_label = Label(frame, text="Population: ")
-        population_label.pack()
-        economy_label = Label(frame, text="", wraplength=350)
-        economy_label.pack()
-
         # Starts the GUI application
-        window.mainloop()
+        window = GUI()
