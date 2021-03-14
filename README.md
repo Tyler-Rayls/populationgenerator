@@ -25,7 +25,7 @@ To run the population generator as a GUI
 ```
 python populationgenerator.py
 ```
-To use the population generator as a microservice
+To allow other microservices to communicate with the population generator
 ```
 python server.py
 ```
