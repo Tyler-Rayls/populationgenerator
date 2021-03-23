@@ -1,5 +1,7 @@
 # Population Generator
-A microservice that gathers the population size and additional, random information related to a state in a given year. 
+A microservice that gathers the population size and additional, random information related to a state in a given year.
+
+![](population-generator.gif)
 
 ## About the Project
 This project is a microservice that was developed in my Software Engineering I course. Students were tasked with creating a microservice that would communicate with another student's microservice. The course served as an introduction to the software development lifecycle, requirements analysis and specification, design techniques, and project management.
